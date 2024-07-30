@@ -25,8 +25,8 @@ end
 
 # Set initial conditions
 u0 = [
-    1,            # H(t)        [lutH]
-    0,            # L(t)        [Ln] inside cell
+    1.0,            # H(t)        [lutH]
+    0.0,            # L(t)        [Ln] inside cell
     0.5,            # M(t)        [unbound truncated lanM] in cytosol
     0.5             # s(t)        stress of cell
 ]
@@ -40,17 +40,17 @@ parameters = [
     1.2,            # n_H1        Hill exponent for lanthanides' activation of lutH
     2.0,            # n_H2        Hill exponent for IPTG activation of lutH
     3.0,            # k_L         dissociation constant for lanthanides
-    49.6,            # k_I         dissociation constant for IPTG
+    49.6,           # k_I         dissociation constant for IPTG
     100,            # I_L           [IPTG] lutH
-    10000,            # I_M           IPTG LanM
-    0.056,            # α           degradation rate of lutH
-    0.3125,            # k_maxuptake maximum uptake of lanthanides
-    1000.0,            # L_out       [Lanthanides outside the cell]
+    10000,          # I_M           IPTG LanM
+    0.056,          # α           degradation rate of lutH
+    0.3125,         # k_maxuptake maximum uptake of lanthanides
+    1000.0,         # L_out       [Lanthanides outside the cell]
     1.0,            # k_m         Michaelis—Menton model constant
     0.1,            # β           degradation rate of lanthanides
     0.1,            # δ           formation rate of lanM—La complexes
     3.0,            # n_M         Hill exponent for IPTG activation of truncated lanM
-    0.01,            # γ           degradation rate of truncated lanM
+    0.01,           # γ           degradation rate of truncated lanM
     0.1,            # k_stress    proportionality constant between [lanthanides] and stress
     0.1             # k_recovery  rate at which the cell recovers from stress
 ]
