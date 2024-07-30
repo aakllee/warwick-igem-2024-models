@@ -7,7 +7,7 @@ function stress!(du, u, p, t)
 
     # Functions
     χ(s) = 1 / (1 + s / b_s)                          # Scaling function for response of dH to stress
-    h(M,L) = δ*M*L                                    # ?????????
+    h(M,L) = δ*M*L                                    # Sequestered Ln
     MM(H) = (k_maxuptake * H * L_out) / (k_M + L_out) # Michaelis-Menten kinetics
     Hill(L,n,K_d) = L^n / (K_d + L^n)                 # Hill equation; L=[ligand], n=Hill coefficient, K_d=dissossiation constant
     HillR(L,n,K_d) = K_d^n / (K_d^n + L^n)
