@@ -3,6 +3,7 @@ package BSimBeacon2;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.util.Vector;
+import java.util.function.ToDoubleFunction;
 
 import javax.vecmath.Vector3d;
 
@@ -57,7 +58,21 @@ public class BSimBeacon {
 	@Parameter(names = "-population", description = "Initial number of bacteria")
 	public static int population = 300;
 
+	@Parameter(names = "-viscosity", description = "Viscosity (Pa s)")
+	public static double visc = 2.7e-3; // Pa s
 
+
+
+	/** Calculates the mean of a value related to the bacteria */
+	private static double calculateMean(ToDoubleFunction<BeaconBacterium> bacAttribute, 
+			Vector<BSimBacterium> bacteria) {
+		double sum = 0.0;
+		for (BSimBacterium b : bacteria) {
+			sum += bacAttribute.applyAsDouble((BeaconBacterium) b);
+		}
+		return sum / bacteria.size();
+	}
+	
 	public static void main(String[] args) {
 		BSimBeacon a = new BSimBeacon();
 		new JCommander(a, args);
@@ -77,28 +92,37 @@ public class BSimBeacon {
 		sim.setSolid(true,true,true);
 		sim.setBound(boundSize,boundSize,1);
 		sim.setSimulationTime(simTime);
+		sim.setVisc(visc);
 
 		/*********************************************************
-		 * Set up the chemical field
+		 * Set up fields
 		 */
-		final double c = 12e5; // molecules
-		final BSimChemicalField cfield = new BSimChemicalField(sim, new int[]{80,1,1}, diffusivity, decayRate);
-		final BSimChemicalField laField = new BSimChemicalField(sim, new int[] {80,80,1}, 0.0, 0.0);
-		final Vector3d fieldPos = new Vector3d(cX, cY, 0);
+		final double c = 12e8; // molecules (used for rendering)
+
+		// Chemoattractant field
+		final BSimChemicalField cField = new BSimChemicalField(sim,
+				new int[]{80,1,1}, diffusivity, decayRate);
+
+		// Position to place chemoattractant
+		final Vector3d chemoattractantPosition = new Vector3d(cX, cY, 0);
+
+		// Lanthanide field
+		final BSimChemicalField lnField = new BSimChemicalField(sim, 
+				new int[] {80,80,1}, 0.0, 0.0);
 
 		/*********************************************************
 		 * Set up the bacteria
 		 */
-		Vector<BSimBacterium> bacteria = new Vector<>();
+		final Vector<BSimBacterium> bacteria = new Vector<>();
 		while(bacteria.size() < population) {
 			// Randomly position bacteria such that they are evenly spread
 			BeaconBacterium p = new BeaconBacterium(sim,
 					new Vector3d(Math.random()*sim.getBound().x,
 							Math.random()*sim.getBound().y,
 							Math.random()*sim.getBound().z),
-					laField);
+					lnField);
 			// Chemotaxis according to chemical field strength
-			p.setGoal(cfield);
+			p.setGoal(cField);
 
 			if(!p.intersection(bacteria)) {
 				bacteria.add(p);
@@ -111,22 +135,30 @@ public class BSimBeacon {
 		sim.setTicker(new BSimTicker() {
 			@Override
 			public void tick() {
+				// Calculate average positions and [Ln]
 				double sumX = 0;
+				double sumL = 0;
 				for(BSimBacterium b : bacteria) {
 					b.action();
 					b.updatePosition();
 					sumX += b.getPosition().getX();
+					sumL += ((BeaconBacterium)b).getLnIn();
 				}
-				System.out.println("Avg X: " + sumX / bacteria.size());
-				cfield.addQuantity(fieldPos, cC);
-				cfield.update();
+				// Log
+				System.out.printf("Avg X: %8.0f | Avg L: %8.0f \n", 
+						sumX / bacteria.size(),
+						sumL / bacteria.size());
+
+				// Maintain chemoattractant field
+				cField.addQuantity(chemoattractantPosition, cC);
+				cField.update();
 			}
 		});
 
 		/*********************************************************
 		 * Set the drawer for the simulation
 		 */
-		BSimDrawer drawer = new BSimP3DDrawer(sim, 800,600) {
+		final BSimDrawer drawer = new BSimP3DDrawer(sim, 800,600) {
 			@Override
 			public void boundaries() {
 				p3d.noFill();
@@ -174,7 +206,7 @@ public class BSimBeacon {
 			public void scene(PGraphics3D p3d) {
 				p3d.ambientLight(128, 128, 128);
 				p3d.directionalLight(128, 128, 128, 1, 1, -1);
-				draw(cfield, Color.BLUE, (float)(255/c));
+				draw(cField, Color.BLUE, (float)(255/c));
 				for(BSimBacterium b : bacteria) {
 					draw(b, Color.RED);
 				}
@@ -186,22 +218,21 @@ public class BSimBeacon {
 		if (export) {
 			String filePath = BSimUtils.generateDirectoryPath(exportPath);
 
-			BSimLogger logger = new BSimLogger(sim, filePath + "x.csv") {
+			BSimLogger logger = new BSimLogger(sim, filePath + "beacon.csv") {
+				// Column titles
 				@Override
 				public void before() {
 					super.before();
-					write("Time (seconds),Mean bacteria position (microns)");
+					this.write("Time (seconds),"
+							+ "Mean bacterium position (microns),"
+							+ "Mean [Ln3+] inside bacterium");
 				}
-
+				// Data
 				@Override
 				public void during() {
-					String buffer = sim.getFormattedTime();
-					double sumX = 0.0;
-					for (BSimBacterium b : bacteria) {
-						sumX += b.getPosition().getX();
-					}
-					buffer += "," + sumX / bacteria.size();
-					write(buffer);
+					this.write(sim.getFormattedTime()
+							+ "," + calculateMean((b) -> b.getPosition().getX(), bacteria) 
+							+ "," + calculateMean((b) -> b.getLnIn(), bacteria));
 				}
 			};
 			logger.setDt(30); // Set export time step

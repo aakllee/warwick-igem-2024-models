@@ -7,25 +7,48 @@ import bsim.BSimChemicalField;
 import bsim.ode.BSimOdeSolver;
 import bsim.ode.BSimOdeSystem;
 import bsim.particle.BSimBacterium;
-
+/**
+ * Class representing our engineered M. extorquens. 
+ * Upon sufficient uptake of lanthanides, the bacterium activates chemotaxis.
+ * Mex has only one flagellum, and so is unlikely to follow the same run-and-tumble
+ * mechanics as E. coli, however we make the assumption that Mex will follow a 
+ * similar net movement, as the run-reverse-flick mechanics that Mex likely follows
+ * is largely very similar, involving a period of running and a period of random
+ * direction change. 
+ * (Park, Y., Kim, Y. and Lim, S. (2019) ‘Locomotion of a single-flagellated bacterium’, 
+ * Journal of Fluid Mechanics, 859, pp. 586–612. doi:10.1017/jfm.2018.799.)
+ */
 public class BeaconBacterium extends BSimBacterium {
 	protected BeaconGRN grn;
 
-	protected double laThreshold = 0.5; // [La] in cell required to activate chemotaxis 
-	protected double laIn;              // [La] in cell
+	protected double lnThreshold = 0.5;  // [Ln3+] in cell required to activate chemotaxis 
+	protected double lnIn;               // [Ln3+] in cell
 	
 	protected double[] y;                // ODE variables
 	
-	protected BSimChemicalField laField; // Field representing [La] in the environment
+	protected BSimChemicalField laField; // Field representing [Ln3+] in the environment
 
-	public BeaconBacterium(BSim sim, Vector3d position, BSimChemicalField LaField) {
+	public BeaconBacterium(BSim sim, Vector3d position, BSimChemicalField lnField) {
 		super(sim, position);
-		this.laIn = 1.0;
+		this.lnIn = 1.0;
 		
+		
+		// Parameters
+		this.forceMagnitude = 1;          // pN
+		this.shortTermMemoryDuration = 1; // seconds
+		this.longTermMemoryDuration = 1;  // seconds
+		this.sensitivity = 1;             // (molecules/(µm)³)
+		
+		/*// See BSimBacterium
+		this.pEndRunUp = 1/1.07;          // 1/t, t = mean time to end a run up (seconds)
+		this.pEndRunElse = 1/0.86;        // 1/t, t = mean time to end a run up when not moving up a gradient (seconds)
+		this.pEndTumble = 1/0.14;         // 1/t, t = mean time to end a tumble (seconds)
+		*/
+		
+		// Setup gene regulatory network
 		this.grn = new BeaconGRN();
 		this.grn.setICs(0.0, 0.0);
 		this.y = this.grn.getICs();
-		
 	}
 	
 	@Override 
@@ -42,21 +65,22 @@ public class BeaconBacterium extends BSimBacterium {
 	public double pEndRun() {
 		return (goal != null && movingUpGradient()
 				// Only activate chemotaxis when La has passed threshold
-				&& this.getLaIn() > this.getLaThreshold()) ? pEndRunUp : pEndRunElse; 
+				&& this.getLnIn() > this.getLnThreshold()) ? 
+						this.pEndRunUp : this.pEndRunElse; 
 	}
 	
-	public void setLaIn(double La_in) { 
-		this.laIn = La_in;
+	public void setLaIn(double lnIn) { 
+		this.lnIn = lnIn;
 	}
-	public void setLaThreshold(double La_threshold) {
-		this.laThreshold = La_threshold; 
+	public void setLaThreshold(double lnThreshold) {
+		this.lnThreshold = lnThreshold; 
 	}
-	public double getLaIn() { return this.laIn; }
-	public double getLaThreshold() { return this.laThreshold; }
+	public double getLnIn() { return this.lnIn; }
+	public double getLnThreshold() { return this.lnThreshold; }
 	public BeaconGRN getGRN() { return this.grn; }
 	
 	// ODEs representing the GRN for LutH/LanM, and their effect on stress
-	class BeaconGRN implements BSimOdeSystem {
+	protected class BeaconGRN implements BSimOdeSystem {
 		int numEq = 2; // Number of equations
 		double[] ics;  // Initial conditions
 		
@@ -68,7 +92,7 @@ public class BeaconBacterium extends BSimBacterium {
 		
 		@Override
 		public double[] derivativeSystem(double t, double[] y) {
-			double[] dy = new double[numEq];
+			double[] dy = new double[this.numEq];
 			
 			return dy;
 		}
