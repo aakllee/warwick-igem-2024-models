@@ -10,7 +10,7 @@ function stress!(du, u, p, t)
     h(M,L) = δ*M*L                                    # Sequestered Ln
     MM(H) = (k_maxuptake * H * L_out) / (k_M + L_out) # Michaelis-Menten kinetics
     Hill(L,n,K_d) = L^n / (K_d + L^n)                 # Hill equation; L=[ligand], n=Hill coefficient, K_d=dissossiation constant
-    HillR(L,n,K_d) = K_d^n / (K_d^n + L^n)
+    HillR(L,n,K_d) = K_d^n / (K_d^n + L^n)            # Inhibitory Hill equation
 
     # Differential equations
     dH = χ(s) * (HillR(L,n_H1,k_L) + Hill(I_L,n_H2,k_I)) - α*H
@@ -41,8 +41,8 @@ parameters = [
     2.0,            # n_H2        Hill exponent for IPTG activation of lutH
     3.0,            # k_L         dissociation constant for lanthanides
     49.6,           # k_I         dissociation constant for IPTG
-    100,            # I_L           [IPTG] lutH
-    10000,          # I_M           IPTG LanM
+    100,            # I_L         [IPTG] lutH
+    10000,          # I_M         [IPTG] LanM
     0.056,          # α           degradation rate of lutH
     0.3125,         # k_maxuptake maximum uptake of lanthanides
     1000.0,         # L_out       [Lanthanides outside the cell]
